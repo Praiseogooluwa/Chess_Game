@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Advanced Chess AI</title>
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+.chessboard {
+  display: grid;
+  grid-template-columns: repeat(8, 50px);
+  grid-template-rows: repeat(8, 50px);
+  background-color: #ffdead;
+  border: 2px solid #000;
+}
+
+.square {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid #000;
+}
+
+.square:nth-child(even) {
+  background-color: #ffe4c4;
+}
+
+.square:nth-child(odd) {
+  background-color: #f5deb3;
+}
+
+.piece {
+  width: 40px;
+  height: 40px;
+  background-size: cover;
+  background-position: center;
+}
+
+.white-pawn {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/Chess_plt45.svg/40px-Chess_plt45.svg.png');
+}
+
+.black-pawn {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Chess_pdt45.svg/40px-Chess_pdt45.svg.png');
+}
+
+.white-knight {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Chess_nlt45.svg/40px-Chess_nlt45.svg.png');
+}
+
+.black-knight {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Chess_ndt45.svg/40px-Chess_ndt45.svg.png');
+}
+
+.white-bishop {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/b/b1/Chess_blt45.svg/40px-Chess_blt45.svg.png');
+}
+
+.black-bishop {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/9/98/Chess_bdt45.svg/40px-Chess_bdt45.svg.png');
+}
+
+.white-rook {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/c/c7/Chess_rlt45.svg/40px-Chess_rlt45.svg.png');
+}
+
+.black-rook {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Chess_rdt45.svg/40px-Chess_rdt45.svg.png');
+}
+
+.white-queen {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Chess_qlt45.svg/40px-Chess_qlt45.svg.png');
+}
+
+.black-queen {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Chess_qdt45.svg/40px-Chess_qdt45.svg.png');
+}
+
+.white-king {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/Chess_klt45.svg/40px-Chess_klt45.svg.png');
+}
+
+.black-king {
+  background-image: url('https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Chess_kdt45.svg/40px-Chess_kdt45.svg.png');
+}
+
+.buttons {
+  display: flex;
+  margin-top: 20px;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 0 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="chessboard" id="chessboard"></div>
+  <div class="buttons">
+    <button id="reset-button">Reset</button>
+    <button id="ai-move-button">AI Move</button>
+  </div>
+</div>
+
+<script>
+const chessboard = document.getElementById('chessboard');
+const resetButton = document.getElementById('reset-button');
+const aiMoveButton = document.getElementById('ai-move-button');
+
+// Initialize the chessboard
+let board = new chess.Board();
+let selectedPiece = null;
+
+// Create the chessboard squares
+for (let i = 0; i < 64; i++) {
+  const square = document.createElement('div');
+  square.classList.add('square');
+  square.dataset.index = i;
+  square.addEventListener('click', handleSquareClick);
+
+  chessboard.appendChild(square);
+}
+
+// Render the initial board state
+renderBoard();
+
+// Handle square clicks
+function handleSquareClick(event) {
+  const squareIndex = parseInt(event.target.dataset.index);
+
+  // If a piece is already selected, move it
+  if (selectedPiece) {
+    const move = chess.Move(selectedPiece.index, squareIndex);
+
+    // Check if the move is valid
+    if (board.legal_moves.includes(move)) {
+      // Make the move
+      board.move(move);
+
+      // Update the board state
+      selectedPiece = null;
+      renderBoard();
+
+      // AI's turn if the AI is enabled
+      if (isAIEnabled) {
+        makeAIMove();
+      }
+    } else {
+      // Invalid move, reset the selection
+      selectedPiece = null;
+      renderBoard();
+    }
+  } else {
+    // Select a piece
+    const piece = board.get(squareIndex);
+
+    // Only select a piece if it belongs to the current player
+    if (piece && piece.color === board.turn) {
+      selectedPiece = {
+        index: squareIndex,
+        type: piece.type,
+        color: piece.color,
+      };
+
+      // Highlight the selected square
+      event.target.classList.add('selected');
+    }
+  }
+}
+
+// Render the chessboard
+function renderBoard() {
+  const squares = chessboard.querySelectorAll('.square');
+
+  // Clear the board
+  squares.forEach(square => {
+    square.innerHTML = '';
+    square.classList.remove('selected');
+  });
+
+  // Place the pieces on the board
+  board.board().forEach((piece, index) => {
+    if (piece) {
+      const square = squares[index];
+      const pieceElement = document.createElement('div');
+      pieceElement.classList.add('piece');
+
+      // Set the piece's class based on its type and color
+      switch (piece.type) {
+        case 'p':
+          pieceElement.classList.add(piece.color === 'w' ? 'white-pawn' : 'black-pawn');
+          break;
+        case 'n':
+          pieceElement.classList.add(piece.color === 'w' ? 'white-knight' : 'black-knight');
+          break;
+        case 'b':
+          pieceElement.classList.add(piece.color === 'w' ? 'white-bishop' : 'black-bishop');
+          break;
+        case 'r':
+          pieceElement.classList.add(piece.color === 'w' ? 'white-rook' : 'black-rook');
+          break;
+        case 'q':
+          pieceElement.classList.add(piece.color === 'w' ? 'white-queen' : 'black-queen');
+          break;
+        case 'k':
+          pieceElement.classList.add(piece.color === 'w' ? 'white-king' : 'black-king');
+          break;
+      }
+
+      // Add the piece to the square
+      square.appendChild(pieceElement);
+    }
+  });
+}
+
+// Reset the board
+resetButton.addEventListener('click', () => {
+  board.reset();
+  selectedPiece = null;
+  renderBoard();
+});
+
+// Make the AI move
+aiMoveButton.addEventListener('click', makeAIMove);
+
+// Function to make the AI move
+function makeAIMove() {
+  // Get the AI's best move
+  const aiMove = ai.get_best_move(board);
+
+  // Make the move on the board
+  board.move(aiMove);
+
+  // Update the board state
+  renderBoard();
+}
+</script>
+</body>
+</html>
